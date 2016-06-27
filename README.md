@@ -5,4 +5,4 @@ This script grabs images from a group or gallery on motherless.com, and puts the
 No exception handling. No flexibility. No threading.
 
 Usage:
-`Python lot.py [url]`
+`python lot.py [url]`
