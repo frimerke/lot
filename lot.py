@@ -1,4 +1,3 @@
-#
 #Lot - a crude imagegrabber for crude images
 #
 # TODO:
@@ -16,19 +15,22 @@ import ConfigParser
 from sys import stdout
 import os
 
+
 config = ConfigParser.ConfigParser()
 configpath = os.path.dirname(os.path.abspath(__file__)) + '/lot.cfg'
-print(configpath)
 config.read(configpath)
 
+
 directory = config.get('Paths', 'downloaddirectory')
+minsize = int(config.get('Limits', 'minsize')) * 1000
+maxsize = int(config.get('Limits', 'maxsize')) * 1000
 os.chdir(directory)
-print(os.getcwd())
 
 subsequentpages = []
 scrapepage = []
 to_download = []
 imageprogress = 0
+skippedfiles = 0
 
 parser = argparse.ArgumentParser()
 parser.add_argument("echo")
@@ -52,12 +54,20 @@ def getallmetas(alist):
 		containers = src.findAll(class_ = "img-container")
 		for container in containers:
 			scrapepage.append("http://www.motherless.com" + container.get("href"))
-		print("found {} things".format(len(scrapepage)))
+		#print("found {} things".format(len(scrapepage)))
+		stdout.write("\rfound {} images".format(len(scrapepage)))
+		stdout.flush()
 
 def download(url, filename):
-	r = requests.get(url)
-	with open(filename, "wb") as code:
-		code.write(r.content)
+	h = requests.head(url)
+	size = h.headers['content-length']
+	if (int(size) < minsize) or (int(size) > maxsize):
+		pass
+		skippedfiles += 1
+	else:
+		r = requests.get(url)
+		with open(filename, "wb") as code:
+			code.write(r.content)
 
 for e in meta:
 	scrapepage.append("http://www.motherless.com" + e.get("href"))
@@ -66,7 +76,9 @@ print("Downloading {}".format(title.strip()))
 
 getallmetas(subsequentpages)
 
-print("found {} images.".format(len(scrapepage)))
+stdout.write("\rfound {} images\n".format(len(scrapepage)))
+stdout.flush()
+
 try:
 	os.mkdir(directory + title.strip())
 except:
@@ -84,8 +96,8 @@ for image in scrapepage:
 	e = elem["href"]
 	filename = e.split("/")
 	filename = filename[-1].split("?")
-	#print("downloading image {} of {}".format(imageprogress, len(scrapepage)))
-	stdout.write("\rdownloading image {} of {}".format(imageprogress, len(scrapepage)))
+	procent = (imageprogress / len(scrapepage))
+	stdout.write("\rdownloading {} of {} | {} files skipped".format(imageprogress, len(scrapepage), skippedfiles))
 	stdout.flush()
 	try:
 		download(e, filename[0])
