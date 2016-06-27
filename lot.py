@@ -12,10 +12,16 @@ import urllib
 import requests
 import argparse
 import sys
-import os
+import ConfigParser
 from sys import stdout
+import os
 
-directory = "/Users/roald/Documents/pron/"
+config = ConfigParser.ConfigParser()
+configpath = os.path.dirname(os.path.abspath(__file__)) + '/lot.cfg'
+print(configpath)
+config.read(configpath)
+
+directory = config.get('Paths', 'downloaddirectory')
 os.chdir(directory)
 print(os.getcwd())
 
