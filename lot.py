@@ -46,7 +46,11 @@ pages = soup.findAll(class_="pagination_link")
 
 for page in pages:
 	for link in page.findAll('a'):
-		subsequentpages.append("http://www.motherless.com" + link.get("href"))
+		try:
+			subsequentpages.append("http://www.motherless.com" + link.get("href"))
+		except:
+			pass
+		
 
 def getallmetas(alist):
 	for thing in alist:
@@ -70,7 +74,10 @@ def download(url, filename):
 			code.write(r.content)
 
 for e in meta:
-	scrapepage.append("http://www.motherless.com" + e.get("href"))
+	try:
+		scrapepage.append("http://www.motherless.com" + e.get("href"))
+	except:
+		pass
 
 print("Downloading {}".format(title.strip()))
 
