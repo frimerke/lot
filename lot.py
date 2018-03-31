@@ -3,7 +3,6 @@
 # TODO:
 # - Threading
 # - More readable printout
-# - Option to skip small or big files
 #
 
 from bs4 import BeautifulSoup
@@ -11,103 +10,62 @@ import urllib
 import requests
 import argparse
 import sys
-import ConfigParser
+import random
+import configparser
 from sys import stdout
 import os
+import common
 
-
-config = ConfigParser.ConfigParser()
+#
+# Config and argument parsing
+#
+config = configparser.ConfigParser()
 configpath = os.path.dirname(os.path.abspath(__file__)) + '/lot.cfg'
 config.read(configpath)
-
 
 directory = config.get('Paths', 'downloaddirectory')
 minsize = int(config.get('Limits', 'minsize')) * 1000
 maxsize = int(config.get('Limits', 'maxsize')) * 1000
+minmax = [minsize, maxsize]
 os.chdir(directory)
-
-subsequentpages = []
-scrapepage = []
-to_download = []
-imageprogress = 0
-skippedfiles = 0
 
 parser = argparse.ArgumentParser()
 parser.add_argument("echo")
 args = parser.parse_args()
 
-src = requests.get(args.echo)
+#
+# Selecting module from URL
+#
+if "motherless" in args.echo:
+    import mother as dl
+elif "fuskator" in args.echo:
+    import fusk as dl
+else:
+    exit()
 
+#URL Handling if necessary - switching to right url if known from supplied
+
+#
+# Download html, convert to traverseable BS
+#
+src = requests.get(args.echo)
 soup = BeautifulSoup(src.text, "html.parser")
 
-title = soup.find(class_="content-title").string
-meta = soup.findAll(class_="img-container")
-pages = soup.findAll(class_="pagination_link")
-
-for page in pages:
-	for link in page.findAll('a'):
-		try:
-			subsequentpages.append("http://www.motherless.com" + link.get("href"))
-		except:
-			pass
-		
-
-def getallmetas(alist):
-	for thing in alist:
-		src = BeautifulSoup(requests.get(thing).text, "html.parser")
-		containers = src.findAll(class_ = "img-container")
-		for container in containers:
-			scrapepage.append("http://www.motherless.com" + container.get("href"))
-		#print("found {} things".format(len(scrapepage)))
-		stdout.write("\rfound {} images".format(len(scrapepage)))
-		stdout.flush()
-
-def download(url, filename):
-	h = requests.head(url)
-	size = h.headers['content-length']
-	if (int(size) < minsize) or (int(size) > maxsize):
-		pass
-		skippedfiles += 1
-	else:
-		r = requests.get(url)
-		with open(filename, "wb") as code:
-			code.write(r.content)
-
-for e in meta:
-	try:
-		scrapepage.append("http://www.motherless.com" + e.get("href"))
-	except:
-		pass
-
+#
+# Fetch and filter title
+#
+title = dl.title(soup)
 print("Downloading {}".format(title.strip()))
 
-getallmetas(subsequentpages)
-
-stdout.write("\rfound {} images\n".format(len(scrapepage)))
+#
+# Expand base url into list of grabbable files- taversing pages if necessary.
+#
+to_get = dl.filelist(soup)
+stdout.write("\rfound {} images\n".format(len(to_get)))
 stdout.flush()
 
-try:
-	os.mkdir(directory + title.strip())
-except:
-	pass
-os.chdir(directory + title.strip())
-
-for image in scrapepage:
-	imageprogress += 1
-	try:
-		page = requests.get(image)
-	except:
-		pass
-	suppe = BeautifulSoup(page.text, "html.parser")
-	elem = suppe.find(rel="image_src")
-	e = elem["href"]
-	filename = e.split("/")
-	filename = filename[-1].split("?")
-	procent = (imageprogress / len(scrapepage))
-	stdout.write("\rdownloading {} of {} | {} files skipped".format(imageprogress, len(scrapepage), skippedfiles))
-	stdout.flush()
-	try:
-		download(e, filename[0])
-
-	except:
-		pass
+#
+# Create a folder based on title and download those files
+#
+common.dir_handling(title, directory)
+dl.down(to_get, minmax)
